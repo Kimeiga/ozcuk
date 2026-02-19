@@ -3,7 +3,41 @@
   import ThemeToggle from '$components/ThemeToggle.svelte';
 
   let { children, data } = $props();
+
+  // Global keyboard shortcuts
+  function handleKeydown(e: KeyboardEvent) {
+    // Ignore if user is typing in an input/textarea
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+      // Escape clears focus from input
+      if (e.key === 'Escape') {
+        target.blur();
+      }
+      return;
+    }
+
+    // "/" focuses the search bar
+    if (e.key === '/') {
+      e.preventDefault();
+      const searchInput = document.querySelector('input[type="text"], input[type="search"]') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+    }
+
+    // "r" goes to random word (with Shift to avoid accidental triggers)
+    if (e.key === 'r' && e.shiftKey) {
+      e.preventDefault();
+      const randomBtn = document.querySelector('button[data-random-word]') as HTMLButtonElement;
+      if (randomBtn) {
+        randomBtn.click();
+      }
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <svelte:head>
   <title>Özcük - Türkçe Sözlük</title>
@@ -17,6 +51,9 @@
         <span>Özcük</span>
       </a>
       <nav class="flex items-center gap-2 sm:gap-4">
+        <a href="/study" class="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm sm:text-base" title="Kelime Çalışması">
+          📚
+        </a>
         <a href="/about" class="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm sm:text-base">
           Hakkında
         </a>

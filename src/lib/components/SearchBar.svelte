@@ -14,7 +14,17 @@
     gloss: string;
   }
 
-  let { query = $bindable(), onSearch, placeholder = 'Kelime veya cümle ara... (örn: gelmek, eve geldim)', autofocus = true }: Props = $props();
+  let { query = $bindable(), onSearch, placeholder, autofocus = true }: Props = $props();
+
+  // Search mode: 'tr' for Turkish, 'en' for English (reverse lookup)
+  let searchMode: 'tr' | 'en' = $state('tr');
+
+  // Dynamic placeholder based on mode
+  const dynamicPlaceholder = $derived(
+    placeholder || (searchMode === 'tr'
+      ? 'Türkçe kelime veya cümle ara... (örn: gelmek, eve geldim)'
+      : 'Search in English... (e.g., love, to come)')
+  );
 
   // Check if input looks like a sentence (2+ Turkish words)
   function isSentence(text: string): boolean {
@@ -33,11 +43,20 @@
     }
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=8`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=8&mode=${searchMode}`);
       const data = await res.json() as { results?: typeof suggestions };
       suggestions = data.results || [];
     } catch (e) {
       suggestions = [];
+    }
+  }
+
+  function toggleSearchMode() {
+    searchMode = searchMode === 'tr' ? 'en' : 'tr';
+    suggestions = [];
+    // Refetch if there's a query
+    if (query.length > 0) {
+      fetchSuggestions(query);
     }
   }
 
@@ -87,6 +106,24 @@
 </script>
 
 <form onsubmit={handleSubmit} class="relative w-full max-w-xl mx-auto">
+  <!-- Search Mode Toggle -->
+  <div class="flex justify-center mb-2">
+    <button
+      type="button"
+      onclick={toggleSearchMode}
+      class="inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-colors"
+    >
+      {#if searchMode === 'tr'}
+        <span>🇹🇷</span>
+        <span>Türkçe → İngilizce</span>
+      {:else}
+        <span>🇬🇧</span>
+        <span>English → Türkçe</span>
+      {/if}
+      <span class="text-xs text-[var(--color-text-secondary)]">(değiştir)</span>
+    </button>
+  </div>
+
   <div class="relative">
     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
       🔍
@@ -94,8 +131,8 @@
     <input
       type="text"
       bind:value={query}
-      {placeholder}
-      {autofocus}
+      placeholder={dynamicPlaceholder}
+      autofocus={autofocus}
       oninput={handleInput}
       onkeydown={handleKeydown}
       onfocus={() => showSuggestions = suggestions.length > 0}

@@ -228,3 +228,74 @@ export function isInfinitive(word: string): boolean {
   return lower.endsWith('mek') || lower.endsWith('mak');
 }
 
+// Reverse index cache (English word -> Turkish words)
+let reverseIndex: Map<string, string[]> | null = null;
+
+/**
+ * Load or build the reverse lookup index (English -> Turkish)
+ */
+async function loadReverseIndex(): Promise<Map<string, string[]>> {
+  if (reverseIndex) return reverseIndex;
+
+  try {
+    // Try to load pre-built reverse index
+    const response = await fetch(`${CDN_BASE}/reverse-index.json`);
+    if (response.ok) {
+      const data = await response.json() as Record<string, string[]>;
+      reverseIndex = new Map(Object.entries(data));
+      return reverseIndex;
+    }
+  } catch (e) {
+    console.error('Failed to load reverse index:', e);
+  }
+
+  // Return empty map if no index available
+  reverseIndex = new Map();
+  return reverseIndex;
+}
+
+/**
+ * Search English glosses to find Turkish words (reverse lookup)
+ */
+export async function searchEnglishToTurkish(query: string, limit: number = 20): Promise<ProcessedWord[]> {
+  if (!query || query.length < 2) return [];
+
+  const normalizedQuery = query.toLowerCase().trim();
+  const reverseIdx = await loadReverseIndex();
+
+  // Find matching English words from the reverse index
+  const matchingTurkish: Set<string> = new Set();
+
+  for (const [englishWord, turkishWords] of reverseIdx.entries()) {
+    if (englishWord.includes(normalizedQuery) || normalizedQuery.includes(englishWord)) {
+      for (const tw of turkishWords) {
+        matchingTurkish.add(tw);
+        if (matchingTurkish.size >= limit * 2) break;
+      }
+    }
+    if (matchingTurkish.size >= limit * 2) break;
+  }
+
+  // Fetch the Turkish words
+  const results: ProcessedWord[] = [];
+  const wordArray = Array.from(matchingTurkish);
+
+  for (let i = 0; i < wordArray.length && results.length < limit; i += 10) {
+    const batch = wordArray.slice(i, i + 10);
+    const wordPromises = batch.map(w => loadWord(w));
+    const wordResults = await Promise.all(wordPromises);
+
+    for (const word of wordResults) {
+      if (word) {
+        // Verify the word actually contains the query in a gloss
+        if (matchesDefinition(word, normalizedQuery)) {
+          results.push(word);
+          if (results.length >= limit) break;
+        }
+      }
+    }
+  }
+
+  return results;
+}
+

@@ -1,6 +1,9 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import SearchBar from '$components/SearchBar.svelte';
+  import WordOfDay from '$components/WordOfDay.svelte';
+  import RecentlyViewed from '$components/RecentlyViewed.svelte';
+  import RandomWordButton from '$components/RandomWordButton.svelte';
 
   let searchQuery = $state('');
 
@@ -42,9 +45,22 @@
   </section>
 
   <!-- Search Section -->
-  <section class="mb-12">
+  <section class="mb-8">
     <SearchBar bind:query={searchQuery} onSearch={handleSearch} />
+    <div class="flex justify-center mt-4">
+      <RandomWordButton />
+    </div>
   </section>
+
+  <!-- Word of the Day -->
+  <section class="mb-8">
+    <WordOfDay />
+  </section>
+
+  <!-- Recently Viewed -->
+  <div class="mb-8">
+    <RecentlyViewed />
+  </div>
 
   <!-- Features -->
   <section class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 mb-12">

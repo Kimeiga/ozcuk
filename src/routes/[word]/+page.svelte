@@ -6,8 +6,12 @@
   import AudioButton from '$components/AudioButton.svelte';
   import MorphBreakdown from '$components/MorphBreakdown.svelte';
   import WordNote from '$components/WordNote.svelte';
+  import ShareButton from '$components/ShareButton.svelte';
+  import SaveButton from '$components/SaveButton.svelte';
+  import RelatedWords from '$components/RelatedWords.svelte';
   import { getPosLabel, isVerb, isInfinitive } from '$lib/utils/dictionary';
   import { conjugateVerb, getConjugation } from '$lib/utils/conjugate-turkish';
+  import { addRecentlyViewed } from '$lib/utils/user-data';
 
   let { data } = $props();
 
@@ -21,6 +25,16 @@
       goto(`/${encodeURIComponent(query.trim())}`);
     }
   }
+
+  // Track recently viewed words
+  $effect(() => {
+    if (data.words.length > 0 && !data.notFound) {
+      const word = data.words[0];
+      const pos = word.pos || 'unknown';
+      const gloss = word.senses?.[0]?.glosses?.[0] || '';
+      addRecentlyViewed(word.word, pos, gloss);
+    }
+  });
 
   // Generate conjugation table if this is a verb (include compound tenses)
   const conjugationTable = $derived.by(() => {
@@ -77,12 +91,16 @@
       <article class="mb-8">
         <!-- Word Header -->
         <header class="mb-6">
-          <div class="flex items-start gap-3">
+          <div class="flex items-start gap-3 flex-wrap">
             <h1 class="text-4xl font-bold turkish-text">{word.word}</h1>
             <AudioButton text={word.word} size="lg" />
             <span class="pos-badge pos-{word.pos === 'adjective' ? 'adj' : word.pos === 'adverb' ? 'adv' : word.pos}">
               {getPosLabel(word.pos).tr}
             </span>
+            <div class="ml-auto flex items-center gap-2">
+              <SaveButton word={word.word} pos={word.pos} gloss={word.senses?.[0]?.glosses?.[0] || ''} />
+              <ShareButton word={word.word} gloss={word.senses?.[0]?.glosses?.[0]} />
+            </div>
           </div>
 
           {#if word.pronunciation}
@@ -179,6 +197,9 @@
             <p class="text-[var(--color-text-secondary)]">{word.etymology}</p>
           </section>
         {/if}
+
+        <!-- Related Words (Synonyms/Antonyms) -->
+        <RelatedWords senses={word.senses} />
 
         <!-- Personal Notes -->
         {#if wordIndex === 0}

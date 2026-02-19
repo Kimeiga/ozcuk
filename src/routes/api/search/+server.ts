@@ -1,26 +1,30 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { searchWords } from '$lib/utils/dictionary';
+import { searchWords, searchEnglishToTurkish } from '$lib/utils/dictionary';
 
 export const GET: RequestHandler = async ({ url }) => {
   const query = url.searchParams.get('q') || '';
   const limit = parseInt(url.searchParams.get('limit') || '20', 10);
-  
+  const mode = url.searchParams.get('mode') || 'tr'; // 'tr' (Turkish) or 'en' (English)
+
   if (!query || query.length < 1) {
     return json({ results: [] });
   }
-  
+
   try {
-    const results = await searchWords(query, Math.min(limit, 50));
-    
+    // Choose search function based on mode
+    const results = mode === 'en'
+      ? await searchEnglishToTurkish(query, Math.min(limit, 50))
+      : await searchWords(query, Math.min(limit, 50));
+
     // Return simplified results for autocomplete
     const simplified = results.map(word => ({
       word: word.word,
       pos: word.pos,
       gloss: word.senses[0]?.glosses[0] || ''
     }));
-    
-    return json({ results: simplified });
+
+    return json({ results: simplified, mode });
   } catch (e) {
     console.error('Search error:', e);
     return json({ results: [], error: 'Search failed' }, { status: 500 });
