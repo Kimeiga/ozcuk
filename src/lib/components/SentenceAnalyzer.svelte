@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { ProcessedWord } from '$lib/utils/dictionary';
   import { getPosLabel } from '$lib/utils/dictionary';
+  import { deinflect, type DeinflectionResult } from '$lib/utils/deinflect';
   import AudioButton from './AudioButton.svelte';
 
   interface Props {
@@ -12,6 +13,7 @@
     word: string;          // Clean word for lookup
     isPunctuation: boolean;
     data: ProcessedWord | null;
+    deinflectionInfo: DeinflectionResult | null;  // Info about how word was deinflected
     loading: boolean;
     error: boolean;
   }
@@ -26,50 +28,79 @@
     // Split on whitespace, keeping punctuation attached
     const parts = text.split(/(\s+)/);
     const result: TokenInfo[] = [];
-    
+
     for (const part of parts) {
       if (!part || /^\s+$/.test(part)) continue;
-      
+
       // Extract the word without leading/trailing punctuation
       const match = part.match(/^([^\p{L}]*)(\p{L}+)([^\p{L}]*)$/u);
-      
+
       if (match) {
         const [, leadingPunct, word, trailingPunct] = match;
         if (leadingPunct) {
-          result.push({ original: leadingPunct, word: '', isPunctuation: true, data: null, loading: false, error: false });
+          result.push({ original: leadingPunct, word: '', isPunctuation: true, data: null, deinflectionInfo: null, loading: false, error: false });
         }
-        result.push({ original: word, word: word.toLowerCase(), isPunctuation: false, data: null, loading: false, error: false });
+        result.push({ original: word, word: word.toLowerCase(), isPunctuation: false, data: null, deinflectionInfo: null, loading: false, error: false });
         if (trailingPunct) {
-          result.push({ original: trailingPunct, word: '', isPunctuation: true, data: null, loading: false, error: false });
+          result.push({ original: trailingPunct, word: '', isPunctuation: true, data: null, deinflectionInfo: null, loading: false, error: false });
         }
       } else {
         // Pure punctuation or non-word
-        result.push({ original: part, word: '', isPunctuation: true, data: null, loading: false, error: false });
+        result.push({ original: part, word: '', isPunctuation: true, data: null, deinflectionInfo: null, loading: false, error: false });
       }
     }
-    
+
     return result;
   }
 
-  // Fetch word data for a token
+  // Try to fetch word data from CDN
+  async function tryFetchWord(word: string): Promise<ProcessedWord | null> {
+    try {
+      const encoded = encodeURIComponent(word);
+      const res = await fetch(`https://cdn.jsdelivr.net/gh/Kimeiga/ozcuk-data@main/words/${encoded}.json`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Word not found
+    }
+    return null;
+  }
+
+  // Fetch word data for a token (with deinflection fallback)
   async function fetchWordData(index: number) {
     const token = tokens[index];
     if (token.isPunctuation || token.data || token.loading) return;
-    
+
     tokens[index].loading = true;
-    
+
     try {
-      const encoded = encodeURIComponent(token.word);
-      const res = await fetch(`/api/search?q=${encoded}&limit=1&exact=true`);
-      const data = await res.json();
-      
-      if (data.results && data.results.length > 0) {
-        // Fetch full word data
-        const wordRes = await fetch(`https://cdn.jsdelivr.net/gh/Kimeiga/ozcuk-data@main/words/${encoded}.json`);
-        if (wordRes.ok) {
-          tokens[index].data = await wordRes.json();
+      // First, try direct lookup
+      let wordData = await tryFetchWord(token.word);
+
+      if (wordData) {
+        tokens[index].data = wordData;
+        tokens[index].deinflectionInfo = null;
+        return;
+      }
+
+      // If not found, try deinflection
+      const deinflections = deinflect(token.word);
+
+      for (const result of deinflections) {
+        // Skip if the dictionary form is the same as the original
+        if (result.dictionaryForm === token.word) continue;
+
+        wordData = await tryFetchWord(result.dictionaryForm);
+        if (wordData) {
+          tokens[index].data = wordData;
+          tokens[index].deinflectionInfo = result;
+          return;
         }
       }
+
+      // No match found
+      tokens[index].error = true;
     } catch (e) {
       tokens[index].error = true;
     } finally {
@@ -140,6 +171,18 @@
         {@const word = token.data}
         <div class="flex items-start justify-between gap-4">
           <div class="flex-1">
+            <!-- Show deinflection info if word was conjugated/inflected -->
+            {#if token.deinflectionInfo}
+              <div class="mb-2 text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-secondary)] px-2 py-1 rounded inline-flex items-center gap-2">
+                <span class="turkish-text font-medium">{token.original}</span>
+                <span>→</span>
+                <span class="turkish-text font-bold text-[var(--color-primary)]">{word.word}</span>
+                {#if token.deinflectionInfo.suffixes.length > 0}
+                  <span class="text-xs">({token.deinflectionInfo.suffixes.join(', ')})</span>
+                {/if}
+              </div>
+            {/if}
+
             <div class="flex items-center gap-2 mb-2">
               <h3 class="text-xl font-bold turkish-text">{word.word}</h3>
               <AudioButton text={word.word} size="sm" />
@@ -147,11 +190,11 @@
                 {getPosLabel(word.pos).tr}
               </span>
             </div>
-            
+
             {#if word.pronunciation}
               <p class="text-sm text-[var(--color-text-secondary)] font-mono mb-2">/{word.pronunciation}/</p>
             {/if}
-            
+
             <ul class="space-y-1">
               {#each word.senses.slice(0, 3) as sense, i}
                 <li class="text-[var(--color-text-secondary)]">
@@ -166,8 +209,8 @@
               {/if}
             </ul>
           </div>
-          
-          <a 
+
+          <a
             href="/{encodeURIComponent(word.word)}"
             class="text-sm text-[var(--color-primary)] hover:underline whitespace-nowrap"
           >
