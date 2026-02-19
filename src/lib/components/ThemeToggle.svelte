@@ -61,12 +61,10 @@
 
 <button
   onclick={toggleTheme}
-  class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-secondary)] 
-         border border-[var(--color-border)] hover:bg-[var(--color-border)] transition-colors"
+  class="p-2 rounded-lg hover:bg-[var(--color-bg-secondary)] transition-colors"
   title={labels[currentTheme]}
   aria-label="Tema değiştir"
 >
   <span class="text-lg">{icons[currentTheme]}</span>
-  <span class="text-sm hidden sm:inline">{labels[currentTheme]}</span>
 </button>
 

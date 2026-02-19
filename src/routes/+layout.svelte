@@ -1,8 +1,30 @@
 <script lang="ts">
   import '../app.css';
+  import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import ThemeToggle from '$components/ThemeToggle.svelte';
 
   let { children, data } = $props();
+
+  let headerSearchQuery = $state('');
+
+  // Check if we're on the homepage
+  const isHomepage = $derived($page.url.pathname === '/');
+
+  function handleHeaderSearch(e: Event) {
+    e.preventDefault();
+    const query = headerSearchQuery.trim();
+    if (query) {
+      // Check if it looks like a sentence (2+ words)
+      const words = query.split(/\s+/).filter(w => /\p{L}/u.test(w));
+      if (words.length >= 2) {
+        goto(`/analyze?s=${encodeURIComponent(query)}`);
+      } else {
+        goto(`/${encodeURIComponent(query)}`);
+      }
+      headerSearchQuery = '';
+    }
+  }
 
   // Global keyboard shortcuts
   function handleKeydown(e: KeyboardEvent) {
@@ -44,18 +66,36 @@
 </svelte:head>
 
 <div class="min-h-screen flex flex-col">
-  <header class="border-b border-[var(--color-border)] bg-[var(--color-bg)]">
-    <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-      <a href="/" class="flex items-center gap-2 text-xl font-bold text-[var(--color-primary)]">
+  <header class="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
+      <a href="/" class="flex items-center gap-2 text-xl font-bold text-[var(--color-primary)] shrink-0">
         <span class="text-2xl">📖</span>
-        <span>Özcük</span>
+        <span class="hidden sm:inline">Özcük</span>
       </a>
-      <nav class="flex items-center gap-2 sm:gap-4">
-        <a href="/study" class="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm sm:text-base" title="Kelime Çalışması">
+
+      <!-- Header Search Bar -->
+      {#if !isHomepage}
+        <form onsubmit={handleHeaderSearch} class="flex-1 max-w-md">
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)] text-sm">🔍</span>
+            <input
+              type="text"
+              bind:value={headerSearchQuery}
+              placeholder="Kelime veya cümle ara..."
+              class="w-full pl-9 pr-3 py-2 rounded-full border border-[var(--color-border)]
+                     bg-[var(--color-bg)] text-[var(--color-text)] text-sm
+                     focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent
+                     placeholder:text-[var(--color-text-secondary)]"
+            />
+          </div>
+        </form>
+      {:else}
+        <div class="flex-1"></div>
+      {/if}
+
+      <nav class="flex items-center gap-1 sm:gap-2 shrink-0">
+        <a href="/study" class="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text)]" title="Kelime Çalışması">
           📚
-        </a>
-        <a href="/about" class="text-[var(--color-text-secondary)] hover:text-[var(--color-text)] text-sm sm:text-base">
-          Hakkında
         </a>
         <ThemeToggle />
 
