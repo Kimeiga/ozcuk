@@ -20,7 +20,8 @@ export interface ProcessedWord {
 }
 
 // CDN base URL for dictionary data
-const CDN_BASE = 'https://cdn.jsdelivr.net/gh/Kimeiga/ozcuk-data@main';
+// Using raw GitHub URLs since jsDelivr has a 50MB repo size limit
+const CDN_BASE = 'https://raw.githubusercontent.com/Kimeiga/ozcuk-data/main';
 
 // Cache for loaded words and word list
 const wordCache = new Map<string, ProcessedWord>();
