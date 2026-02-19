@@ -14,11 +14,15 @@
 
   interface Props {
     word: ProcessedWord;
+    baseWordData?: ProcessedWord | null; // For form-of entries, the base word's data
     deinflectionInfo?: DeinflectionResult | null;
     showNotes?: boolean;
   }
 
-  let { word, deinflectionInfo = null, showNotes = false }: Props = $props();
+  let { word, baseWordData = null, deinflectionInfo = null, showNotes = false }: Props = $props();
+
+  // Check if the current word is a form-of entry
+  const isFormOf = $derived(word.senses?.some(sense => sense.tags?.includes('form-of')) ?? false);
 
   const user = $derived($page.data.user);
   let showConjugation = $state(false);
@@ -111,6 +115,29 @@
       {/each}
     </ol>
   </section>
+
+  <!-- Base Word Definition (for form-of entries) -->
+  {#if isFormOf && baseWordData}
+    <section class="mb-6 p-4 bg-[var(--color-bg-secondary)] rounded-lg border-l-4 border-[var(--color-primary)]">
+      <h3 class="text-lg font-semibold mb-3 flex items-center gap-2">
+        <a href="/{encodeURIComponent(baseWordData.word)}" class="turkish-text text-[var(--color-primary)] hover:underline">
+          {baseWordData.word}
+        </a>
+        <span class="pos-badge pos-{baseWordData.pos === 'adjective' ? 'adj' : baseWordData.pos === 'adverb' ? 'adv' : baseWordData.pos}">
+          {getPosLabel(baseWordData.pos).tr}
+        </span>
+      </h3>
+      <ol class="list-decimal list-inside space-y-2">
+        {#each baseWordData.senses as sense}
+          <li class="pl-2 text-[var(--color-text)]">
+            {#each sense.glosses as gloss}
+              <span>{gloss}</span>
+            {/each}
+          </li>
+        {/each}
+      </ol>
+    </section>
+  {/if}
 
   <!-- Etymology -->
   {#if word.etymology}

@@ -11,6 +11,7 @@
     word: string;
     isPunctuation: boolean;
     data: ProcessedWord | null;
+    baseWordData: ProcessedWord | null; // For form-of entries, the base word's data
     deinflectionInfo: DeinflectionResult | null;
     loading: boolean;
     error: boolean;
@@ -52,14 +53,14 @@
       if (match) {
         const [, leadingPunct, word, trailingPunct] = match;
         if (leadingPunct) {
-          result.push({ original: leadingPunct, word: '', isPunctuation: true, data: null, deinflectionInfo: null, loading: false, error: false });
+          result.push({ original: leadingPunct, word: '', isPunctuation: true, data: null, baseWordData: null, deinflectionInfo: null, loading: false, error: false });
         }
-        result.push({ original: word, word: word.toLowerCase(), isPunctuation: false, data: null, deinflectionInfo: null, loading: false, error: false });
+        result.push({ original: word, word: word.toLowerCase(), isPunctuation: false, data: null, baseWordData: null, deinflectionInfo: null, loading: false, error: false });
         if (trailingPunct) {
-          result.push({ original: trailingPunct, word: '', isPunctuation: true, data: null, deinflectionInfo: null, loading: false, error: false });
+          result.push({ original: trailingPunct, word: '', isPunctuation: true, data: null, baseWordData: null, deinflectionInfo: null, loading: false, error: false });
         }
       } else {
-        result.push({ original: part, word: '', isPunctuation: true, data: null, deinflectionInfo: null, loading: false, error: false });
+        result.push({ original: part, word: '', isPunctuation: true, data: null, baseWordData: null, deinflectionInfo: null, loading: false, error: false });
       }
     }
 
@@ -83,7 +84,19 @@
     return null;
   }
 
-  // Fetch word data for a token (with deinflection fallback)
+  // Extract base word from form-of gloss (e.g., "first-person singular past of gelmek" -> "gelmek")
+  function extractBaseWordFromGloss(gloss: string): string | null {
+    // Match patterns like "... of <word>" at the end of the gloss
+    const match = gloss.match(/\bof\s+(\S+)$/i);
+    return match ? match[1] : null;
+  }
+
+  // Check if word data is a form-of entry
+  function isFormOfEntry(wordData: ProcessedWord): boolean {
+    return wordData.senses?.some(sense => sense.tags?.includes('form-of')) ?? false;
+  }
+
+  // Fetch word data for a token (with deinflection fallback and base word lookup)
   async function fetchWordData(index: number) {
     const token = tokens[index];
     if (token.isPunctuation || token.data || token.loading) return;
@@ -96,6 +109,20 @@
       if (wordData) {
         tokens[index].data = wordData;
         tokens[index].deinflectionInfo = null;
+
+        // If this is a form-of entry, try to fetch the base word
+        if (isFormOfEntry(wordData)) {
+          const firstGloss = wordData.senses?.[0]?.glosses?.[0];
+          if (firstGloss) {
+            const baseWord = extractBaseWordFromGloss(firstGloss);
+            if (baseWord) {
+              const baseWordData = await tryFetchWord(baseWord);
+              if (baseWordData) {
+                tokens[index].baseWordData = baseWordData;
+              }
+            }
+          }
+        }
         return;
       }
 
@@ -107,6 +134,7 @@
         wordData = await tryFetchWord(result.dictionaryForm);
         if (wordData) {
           tokens[index].data = wordData;
+          tokens[index].baseWordData = wordData; // Base word is the same as the deinflected word
           tokens[index].deinflectionInfo = { ...result, originalWord: token.original };
           return;
         }
@@ -230,6 +258,7 @@
         {:else if selectedToken.data}
           <WordDisplay
             word={selectedToken.data}
+            baseWordData={selectedToken.baseWordData}
             deinflectionInfo={selectedToken.deinflectionInfo}
           />
         {:else if selectedToken.error}
