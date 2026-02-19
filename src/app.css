@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+
+/* Light theme (default) */
+:root {
+  --color-primary: #dc2626;
+  --color-primary-hover: #b91c1c;
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-text: #111827;
+  --color-text-secondary: #6b7280;
+  --color-border: #e5e7eb;
+}
+
+/* Dark theme variables */
+.dark {
+  --color-primary: #ef4444;
+  --color-primary-hover: #f87171;
+  --color-bg: #111827;
+  --color-bg-secondary: #1f2937;
+  --color-text: #f9fafb;
+  --color-text-secondary: #9ca3af;
+  --color-border: #374151;
+}
+
+/* Respect system preference when no manual override */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --color-primary: #ef4444;
+    --color-primary-hover: #f87171;
+    --color-bg: #111827;
+    --color-bg-secondary: #1f2937;
+    --color-text: #f9fafb;
+    --color-text-secondary: #9ca3af;
+    --color-border: #374151;
+  }
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Turkish-specific typography */
+.turkish-text {
+  font-feature-settings: 'liga' 1, 'calt' 1;
+}
+
+/* Conjugation table styles */
+.conjugation-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.conjugation-table th,
+.conjugation-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.conjugation-table th {
+  background-color: var(--color-bg-secondary);
+  font-weight: 600;
+}
+
+.conjugation-table tr:hover {
+  background-color: var(--color-bg-secondary);
+}
+
+/* Word card styles */
+.word-card {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  transition: box-shadow 0.2s;
+}
+
+.word-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+/* Part of speech badges */
+.pos-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.pos-noun { background-color: #dbeafe; color: #1e40af; }
+.pos-verb { background-color: #dcfce7; color: #166534; }
+.pos-adj { background-color: #fef3c7; color: #92400e; }
+.pos-adv { background-color: #f3e8ff; color: #7c3aed; }
+.pos-other { background-color: #f3f4f6; color: #374151; }
+
+/* Dark mode pos badges */
+.dark .pos-noun { background-color: #1e3a5f; color: #93c5fd; }
+.dark .pos-verb { background-color: #14532d; color: #86efac; }
+.dark .pos-adj { background-color: #451a03; color: #fcd34d; }
+.dark .pos-adv { background-color: #4c1d95; color: #c4b5fd; }
+.dark .pos-other { background-color: #374151; color: #d1d5db; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .pos-noun { background-color: #1e3a5f; color: #93c5fd; }
+  :root:not(.light) .pos-verb { background-color: #14532d; color: #86efac; }
+  :root:not(.light) .pos-adj { background-color: #451a03; color: #fcd34d; }
+  :root:not(.light) .pos-adv { background-color: #4c1d95; color: #c4b5fd; }
+  :root:not(.light) .pos-other { background-color: #374151; color: #d1d5db; }
+}
+

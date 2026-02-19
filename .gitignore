@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+
+# Build output
+.svelte-kit/
+build/
+dist/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Wrangler
+.wrangler/
+.dev.vars
+
+# Dictionary source data (large files - hosted separately)
+data/
+src/lib/data/words/
+
+# TypeScript
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+
