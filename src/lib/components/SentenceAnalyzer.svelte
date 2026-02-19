@@ -173,12 +173,20 @@
           <div class="flex-1">
             <!-- Show deinflection info if word was conjugated/inflected -->
             {#if token.deinflectionInfo}
-              <div class="mb-2 text-sm text-[var(--color-text-secondary)] bg-[var(--color-bg-secondary)] px-2 py-1 rounded inline-flex items-center gap-2">
-                <span class="turkish-text font-medium">{token.original}</span>
-                <span>→</span>
-                <span class="turkish-text font-bold text-[var(--color-primary)]">{word.word}</span>
-                {#if token.deinflectionInfo.suffixes.length > 0}
-                  <span class="text-xs">({token.deinflectionInfo.suffixes.join(', ')})</span>
+              <div class="mb-3 text-sm bg-[var(--color-bg-secondary)] px-3 py-2 rounded-lg">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="turkish-text font-medium text-[var(--color-text)]">{token.original}</span>
+                  <span class="text-[var(--color-text-secondary)]">→</span>
+                  <span class="turkish-text font-bold text-[var(--color-primary)]">{word.word}</span>
+                </div>
+                {#if token.deinflectionInfo.suffixLabels && token.deinflectionInfo.suffixLabels.length > 0}
+                  <div class="flex flex-wrap gap-1">
+                    {#each token.deinflectionInfo.suffixLabels as label}
+                      <span class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-bg)] text-[var(--color-text-secondary)]">
+                        {label}
+                      </span>
+                    {/each}
+                  </div>
                 {/if}
               </div>
             {/if}
