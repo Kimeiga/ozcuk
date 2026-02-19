@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Özcük</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📖 Özcük</h1>
+      <p class="subtitle">Türkçe-İngilizce Sözlük</p>
+    </header>
+
+    <div class="search-box">
+      <input type="text" id="search-input" placeholder="Kelime ara..." autofocus>
+      <button id="search-btn">🔍</button>
+    </div>
+
+    <div id="result" class="result hidden">
+      <div class="word-header">
+        <span class="word" id="word-text"></span>
+        <span class="pos" id="word-pos"></span>
+      </div>
+      <div class="pronunciation" id="word-pronunciation"></div>
+      <div class="definitions" id="word-definitions"></div>
+      <a id="word-link" class="full-link" href="#" target="_blank">Detaylı bilgi için tıkla →</a>
+    </div>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <span>Aranıyor...</span>
+    </div>
+
+    <div id="error" class="error hidden">
+      <span>❌</span>
+      <span id="error-message">Kelime bulunamadı</span>
+    </div>
+
+    <footer>
+      <p>
+        <a href="https://ozcuk.pages.dev" target="_blank">ozcuk.pages.dev</a>
+      </p>
+      <p class="tip">💡 Sayfada bir kelimeyi seçin ve sağ tıklayın</p>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
+
