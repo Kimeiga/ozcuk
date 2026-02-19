@@ -1,0 +1,63 @@
+name: Build Dictionary Data
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build-word-files.ts'
+      - 'scripts/download-data.sh'
+      - 'scripts/process-dictionary.ts'
+      - '.github/workflows/build-dictionary.yml'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout ozcuk repo
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Download Turkish dictionary data
+        run: |
+          mkdir -p data
+          curl -L "https://kaikki.org/dictionary/Turkish/kaikki.org-dictionary-Turkish.jsonl" -o data/turkish-raw.jsonl
+          
+      - name: Process dictionary data
+        run: npx tsx scripts/process-dictionary.ts
+        
+      - name: Build individual word files
+        run: |
+          mkdir -p output
+          INPUT_DIR=src/lib/data/words OUTPUT_DIR=output npx tsx scripts/build-word-files.ts
+          
+      - name: Clone ozcuk-data repo
+        run: |
+          git clone https://x-access-token:${{ secrets.DATA_REPO_TOKEN }}@github.com/Kimeiga/ozcuk-data.git ozcuk-data-repo
+          
+      - name: Update ozcuk-data repo
+        run: |
+          cd ozcuk-data-repo
+          # Clear old data
+          rm -rf words shards index.json
+          # Copy new data
+          cp -r ../output/words .
+          cp ../output/index.json .
+          
+      - name: Commit and push to ozcuk-data
+        run: |
+          cd ozcuk-data-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --staged --quiet || git commit -m "Update dictionary data $(date -u +%Y-%m-%d)"
+          git push
+

@@ -1,6 +1,7 @@
 /**
  * Dictionary service for loading and searching Turkish words
- * Fetches from jsDelivr CDN with hash-based sharding (256 buckets)
+ * Fetches individual word files from jsDelivr CDN
+ * URL pattern: /words/{word}.json
  */
 
 export interface ProcessedWord {
@@ -21,9 +22,9 @@ export interface ProcessedWord {
 // CDN base URL for dictionary data
 const CDN_BASE = 'https://cdn.jsdelivr.net/gh/Kimeiga/ozcuk-data@main';
 
-// Cache for loaded shards and word index
-const shardCache = new Map<string, ProcessedWord[]>();
-let wordIndex: Record<string, string> | null = null;
+// Cache for loaded words and word list
+const wordCache = new Map<string, ProcessedWord>();
+let wordList: string[] | null = null;
 
 /**
  * Normalize Turkish characters for lookup
@@ -33,60 +34,43 @@ export function normalizeForLookup(word: string): string {
 }
 
 /**
- * Hash function for word sharding (djb2)
+ * Load the word index (array of all words for autocomplete)
  */
-function hashWord(word: string): number {
-  let hash = 5381;
-  for (let i = 0; i < word.length; i++) {
-    hash = ((hash << 5) + hash) + word.charCodeAt(i);
-  }
-  return Math.abs(hash);
-}
-
-/**
- * Get the shard key (00-ff) for a word using hash
- */
-export function getShardKey(word: string): string {
-  const normalized = normalizeForLookup(word);
-  const hash = hashWord(normalized);
-  return (hash % 256).toString(16).padStart(2, '0');
-}
-
-/**
- * Load the word index (maps word -> shard key)
- */
-async function loadWordIndex(): Promise<Record<string, string>> {
-  if (wordIndex) return wordIndex;
+async function loadWordIndex(): Promise<string[]> {
+  if (wordList) return wordList;
 
   try {
     const response = await fetch(`${CDN_BASE}/index.json`);
-    wordIndex = await response.json();
-    return wordIndex!;
+    wordList = await response.json() as string[];
+    return wordList;
   } catch (e) {
     console.error('Failed to load word index:', e);
-    return {};
+    return [];
   }
 }
 
 /**
- * Load a shard from CDN
+ * Load a single word from CDN
  */
-export async function loadWordShard(shardKey: string): Promise<ProcessedWord[]> {
-  if (shardCache.has(shardKey)) {
-    return shardCache.get(shardKey)!;
+async function loadWord(word: string): Promise<ProcessedWord | null> {
+  const normalized = normalizeForLookup(word);
+
+  if (wordCache.has(normalized)) {
+    return wordCache.get(normalized)!;
   }
 
   try {
-    const response = await fetch(`${CDN_BASE}/shards/${shardKey}/words.json`);
+    const encoded = encodeURIComponent(normalized);
+    const response = await fetch(`${CDN_BASE}/words/${encoded}.json`);
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      return null;
     }
-    const data = await response.json() as ProcessedWord[];
-    shardCache.set(shardKey, data);
+    const data = await response.json() as ProcessedWord;
+    wordCache.set(normalized, data);
     return data;
   } catch (e) {
-    console.error(`Failed to load shard: ${shardKey}`, e);
-    return [];
+    console.error(`Failed to load word: ${word}`, e);
+    return null;
   }
 }
 
@@ -94,11 +78,8 @@ export async function loadWordShard(shardKey: string): Promise<ProcessedWord[]> 
  * Find a word by exact match
  */
 export async function findWord(query: string): Promise<ProcessedWord[]> {
-  const normalized = normalizeForLookup(query);
-  const shardKey = getShardKey(normalized);
-  const words = await loadWordShard(shardKey);
-  
-  return words.filter(w => normalizeForLookup(w.word) === normalized);
+  const word = await loadWord(query);
+  return word ? [word] : [];
 }
 
 /**
@@ -158,37 +139,32 @@ export async function searchWords(query: string, limit: number = 20): Promise<Pr
 
   const normalized = normalizeForLookup(query);
 
-  // Load the word index for prefix matching
-  const index = await loadWordIndex();
+  // Load the word index (array of all words)
+  const allWords = await loadWordIndex();
 
-  // Find all words that match the query (prefix match on index keys)
+  // Find all words that match the query (exact or prefix match)
   const matchingWords: string[] = [];
-  for (const word of Object.keys(index)) {
+  for (const word of allWords) {
     if (word === normalized || word.startsWith(normalized)) {
       matchingWords.push(word);
       if (matchingWords.length >= limit * 2) break; // Get more than needed for ranking
     }
   }
 
-  // Group by shard and fetch
-  const shardGroups = new Map<string, string[]>();
-  for (const word of matchingWords) {
-    const shardKey = index[word];
-    if (!shardGroups.has(shardKey)) {
-      shardGroups.set(shardKey, []);
-    }
-    shardGroups.get(shardKey)!.push(word);
-  }
+  // Fetch individual word files in parallel (limit concurrent requests)
+  const batchSize = 10;
+  const results: ProcessedWord[] = [];
 
-  // Fetch needed shards in parallel
-  const shardPromises = Array.from(shardGroups.keys()).map(key => loadWordShard(key));
-  const shardResults = await Promise.all(shardPromises);
+  for (let i = 0; i < matchingWords.length && results.length < limit; i += batchSize) {
+    const batch = matchingWords.slice(i, i + batchSize);
+    const wordPromises = batch.map(w => loadWord(w));
+    const wordResults = await Promise.all(wordPromises);
 
-  // Build a map of word -> ProcessedWord
-  const wordMap = new Map<string, ProcessedWord>();
-  for (const shard of shardResults) {
-    for (const word of shard) {
-      wordMap.set(normalizeForLookup(word.word), word);
+    for (const word of wordResults) {
+      if (word) {
+        results.push(word);
+        if (results.length >= limit) break;
+      }
     }
   }
 
@@ -196,11 +172,8 @@ export async function searchWords(query: string, limit: number = 20): Promise<Pr
   const exactMatches: ProcessedWord[] = [];
   const prefixMatches: ProcessedWord[] = [];
 
-  for (const wordKey of matchingWords) {
-    const word = wordMap.get(wordKey);
-    if (!word) continue;
-
-    if (wordKey === normalized) {
+  for (const word of results) {
+    if (normalizeForLookup(word.word) === normalized) {
       exactMatches.push(word);
     } else {
       prefixMatches.push(word);
@@ -211,9 +184,7 @@ export async function searchWords(query: string, limit: number = 20): Promise<Pr
   prefixMatches.sort((a, b) => a.word.length - b.word.length);
 
   // Combine results
-  const results = [...exactMatches, ...prefixMatches].slice(0, limit);
-
-  return results;
+  return [...exactMatches, ...prefixMatches].slice(0, limit);
 }
 
 /**
