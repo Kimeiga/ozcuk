@@ -1,7 +1,7 @@
 /**
  * Dictionary service for loading and searching Turkish words
- * Fetches individual word files from jsDelivr CDN
- * URL pattern: /words/{word}.json
+ * Fetches individual word files from GitHub (deflate compressed)
+ * URL pattern: /words/{word}.json.deflate
  */
 
 export interface ProcessedWord {
@@ -28,6 +28,16 @@ const wordCache = new Map<string, ProcessedWord>();
 let wordList: string[] | null = null;
 
 /**
+ * Decompress a deflate-compressed response
+ */
+async function decompressResponse<T>(response: Response): Promise<T> {
+  const ds = new DecompressionStream('deflate');
+  const decompressedStream = response.body!.pipeThrough(ds);
+  const text = await new Response(decompressedStream).text();
+  return JSON.parse(text) as T;
+}
+
+/**
  * Normalize Turkish characters for lookup
  */
 export function normalizeForLookup(word: string): string {
@@ -41,8 +51,9 @@ async function loadWordIndex(): Promise<string[]> {
   if (wordList) return wordList;
 
   try {
-    const response = await fetch(`${CDN_BASE}/index.json`);
-    wordList = await response.json() as string[];
+    const response = await fetch(`${CDN_BASE}/index.json.deflate`);
+    if (!response.ok) return [];
+    wordList = await decompressResponse<string[]>(response);
     return wordList;
   } catch (e) {
     console.error('Failed to load word index:', e);
@@ -51,7 +62,7 @@ async function loadWordIndex(): Promise<string[]> {
 }
 
 /**
- * Load a single word from CDN
+ * Load a single word from CDN (deflate compressed)
  */
 async function loadWord(word: string): Promise<ProcessedWord | null> {
   const normalized = normalizeForLookup(word);
@@ -62,11 +73,11 @@ async function loadWord(word: string): Promise<ProcessedWord | null> {
 
   try {
     const encoded = encodeURIComponent(normalized);
-    const response = await fetch(`${CDN_BASE}/words/${encoded}.json`);
+    const response = await fetch(`${CDN_BASE}/words/${encoded}.json.deflate`);
     if (!response.ok) {
       return null;
     }
-    const data = await response.json() as ProcessedWord;
+    const data = await decompressResponse<ProcessedWord>(response);
     wordCache.set(normalized, data);
     return data;
   } catch (e) {
@@ -239,10 +250,10 @@ async function loadReverseIndex(): Promise<Map<string, string[]>> {
   if (reverseIndex) return reverseIndex;
 
   try {
-    // Try to load pre-built reverse index
-    const response = await fetch(`${CDN_BASE}/reverse-index.json`);
+    // Try to load pre-built reverse index (deflate compressed)
+    const response = await fetch(`${CDN_BASE}/reverse-index.json.deflate`);
     if (response.ok) {
-      const data = await response.json() as Record<string, string[]>;
+      const data = await decompressResponse<Record<string, string[]>>(response);
       reverseIndex = new Map(Object.entries(data));
       return reverseIndex;
     }
