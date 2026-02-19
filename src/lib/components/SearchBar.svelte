@@ -14,7 +14,13 @@
     gloss: string;
   }
 
-  let { query = $bindable(), onSearch, placeholder = 'Kelime ara... (örn: gelmek, güzel)', autofocus = true }: Props = $props();
+  let { query = $bindable(), onSearch, placeholder = 'Kelime veya cümle ara... (örn: gelmek, eve geldim)', autofocus = true }: Props = $props();
+
+  // Check if input looks like a sentence (2+ Turkish words)
+  function isSentence(text: string): boolean {
+    const words = text.trim().split(/\s+/).filter(w => /\p{L}/u.test(w));
+    return words.length >= 2;
+  }
   let suggestions: SearchResult[] = $state([]);
   let showSuggestions = $state(false);
   let selectedIndex = $state(-1);
@@ -45,7 +51,13 @@
   function handleSubmit(e: Event) {
     e.preventDefault();
     showSuggestions = false;
-    onSearch(query);
+
+    // If it looks like a sentence, go to sentence analyzer
+    if (isSentence(query)) {
+      goto(`/analyze?s=${encodeURIComponent(query.trim())}`);
+    } else {
+      onSearch(query);
+    }
   }
 
   function handleKeydown(e: KeyboardEvent) {
