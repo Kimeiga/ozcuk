@@ -88,7 +88,7 @@
   <title>Özcük - Türkçe Sözlük | Turkish Dictionary</title>
 </svelte:head>
 
-<div class="max-w-4xl mx-auto px-4 py-8">
+<div class="max-w-6xl mx-auto px-4 py-8">
   <!-- Hero Section -->
   <section class="text-center mb-8">
     <h1 class="text-4xl md:text-5xl font-bold mb-3">
@@ -100,7 +100,7 @@
   </section>
 
   <!-- Search Section -->
-  <section class="mb-8">
+  <section class="mb-8 max-w-2xl mx-auto">
     <SearchBar bind:query={searchQuery} onSearch={handleSearch} />
     <div class="flex justify-center mt-4">
       <RandomWordButton />
@@ -108,12 +108,12 @@
   </section>
 
   <!-- Word of the Day -->
-  <section class="mb-8">
+  <section class="mb-8 max-w-2xl mx-auto">
     <WordOfDay />
   </section>
 
   <!-- Recently Viewed -->
-  <div class="mb-10">
+  <div class="mb-10 max-w-2xl mx-auto">
     <RecentlyViewed />
   </div>
 
@@ -123,13 +123,13 @@
       💬 Örnek Cümleler
       <span class="text-sm font-normal text-[var(--color-text-secondary)]">— tıklayarak analiz edin</span>
     </h2>
-    <div class="grid gap-3">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
       {#each exampleSentences as { sentence, translation, grammar }}
         <a
           href="/analyze?s={encodeURIComponent(sentence)}"
           class="word-card hover:border-[var(--color-primary)] transition-colors block"
         >
-          <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+          <div class="flex flex-col gap-1">
             <span class="font-semibold turkish-text text-lg">{sentence}</span>
             <span class="text-xs px-2 py-0.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] w-fit">{grammar}</span>
           </div>
