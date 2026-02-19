@@ -160,17 +160,24 @@
   let selectedTokenIndex = $derived(getTokenIndexFromWordIndex(selectedIndex));
   let selectedToken = $derived(tokens[selectedTokenIndex]);
 
+  // Track current sentence to avoid re-fetching
+  let currentSentence = $state('');
+
   // Initialize tokens when sentence changes
   $effect(() => {
-    if (sentence) {
-      tokens = tokenize(sentence);
+    if (sentence && sentence !== currentSentence) {
+      currentSentence = sentence;
+      const newTokens = tokenize(sentence);
+      tokens = newTokens;
 
-      // Prefetch all word data
-      tokens.forEach((_, i) => {
-        if (!tokens[i].isPunctuation) {
-          fetchWordData(i);
-        }
-      });
+      // Prefetch all word data (run outside effect to avoid loops)
+      setTimeout(() => {
+        newTokens.forEach((_, i) => {
+          if (!newTokens[i].isPunctuation) {
+            fetchWordData(i);
+          }
+        });
+      }, 0);
     }
   });
 </script>
