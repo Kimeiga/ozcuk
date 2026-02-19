@@ -1,61 +1,49 @@
 <script lang="ts">
   import { browser } from '$app/environment';
-  
-  type Theme = 'light' | 'dark' | 'system';
-  
-  let currentTheme = $state<Theme>('system');
-  
+
+  type Theme = 'light' | 'dark';
+
+  let currentTheme = $state<Theme>('light');
+
   // Initialize theme from localStorage on mount
   $effect(() => {
     if (browser) {
-      const saved = localStorage.getItem('theme') as Theme | null;
-      if (saved && ['light', 'dark', 'system'].includes(saved)) {
-        currentTheme = saved;
+      const saved = localStorage.getItem('theme');
+      // Convert 'system' to 'light' for backwards compatibility
+      if (saved === 'dark') {
+        currentTheme = 'dark';
+      } else {
+        currentTheme = 'light';
       }
       applyTheme(currentTheme);
     }
   });
-  
+
   function applyTheme(theme: Theme) {
     if (!browser) return;
-    
+
     const root = document.documentElement;
-    
+
     // Remove existing theme classes
     root.classList.remove('light', 'dark');
-    
-    if (theme === 'light') {
-      root.classList.add('light');
-    } else if (theme === 'dark') {
-      root.classList.add('dark');
-    }
-    // 'system' means no class, let CSS media query handle it
-    
+    root.classList.add(theme);
+
     localStorage.setItem('theme', theme);
   }
-  
+
   function toggleTheme() {
-    // Cycle: system -> light -> dark -> system
-    if (currentTheme === 'system') {
-      currentTheme = 'light';
-    } else if (currentTheme === 'light') {
-      currentTheme = 'dark';
-    } else {
-      currentTheme = 'system';
-    }
+    currentTheme = currentTheme === 'light' ? 'dark' : 'light';
     applyTheme(currentTheme);
   }
-  
+
   const icons = {
     light: '☀️',
-    dark: '🌙',
-    system: '💻'
+    dark: '🌙'
   };
-  
+
   const labels = {
     light: 'Açık tema',
-    dark: 'Koyu tema',
-    system: 'Sistem'
+    dark: 'Koyu tema'
   };
 </script>
 
