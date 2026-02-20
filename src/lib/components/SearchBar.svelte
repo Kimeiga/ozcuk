@@ -12,25 +12,18 @@
     word: string;
     pos: string;
     gloss: string;
+    source?: 'turkish' | 'english';
+    matchedEnglish?: string;
   }
 
-  let { query = $bindable(), onSearch, placeholder, autofocus = true }: Props = $props();
+  let { query = $bindable(), onSearch, placeholder = 'Search Turkish or English...', autofocus = true }: Props = $props();
 
-  // Search mode: 'tr' for Turkish, 'en' for English (reverse lookup)
-  let searchMode: 'tr' | 'en' = $state('tr');
-
-  // Dynamic placeholder based on mode
-  const dynamicPlaceholder = $derived(
-    placeholder || (searchMode === 'tr'
-      ? 'Türkçe kelime veya cümle ara... (örn: gelmek, eve geldim)'
-      : 'Search in English... (e.g., love, to come)')
-  );
-
-  // Check if input looks like a sentence (2+ Turkish words)
+  // Check if input looks like a sentence (2+ words)
   function isSentence(text: string): boolean {
     const words = text.trim().split(/\s+/).filter(w => /\p{L}/u.test(w));
     return words.length >= 2;
   }
+
   let suggestions: SearchResult[] = $state([]);
   let showSuggestions = $state(false);
   let selectedIndex = $state(-1);
@@ -43,20 +36,11 @@
     }
 
     try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=8&mode=${searchMode}`);
-      const data = await res.json() as { results?: typeof suggestions };
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=10`);
+      const data = await res.json() as { results?: SearchResult[] };
       suggestions = data.results || [];
     } catch (e) {
       suggestions = [];
-    }
-  }
-
-  function toggleSearchMode() {
-    searchMode = searchMode === 'tr' ? 'en' : 'tr';
-    suggestions = [];
-    // Refetch if there's a query
-    if (query.length > 0) {
-      fetchSuggestions(query);
     }
   }
 
@@ -106,24 +90,6 @@
 </script>
 
 <form onsubmit={handleSubmit} class="relative w-full max-w-xl mx-auto">
-  <!-- Search Mode Toggle -->
-  <div class="flex justify-center mb-2">
-    <button
-      type="button"
-      onclick={toggleSearchMode}
-      class="inline-flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-colors"
-    >
-      {#if searchMode === 'tr'}
-        <span>🇹🇷</span>
-        <span>Türkçe → İngilizce</span>
-      {:else}
-        <span>🇬🇧</span>
-        <span>English → Türkçe</span>
-      {/if}
-      <span class="text-xs text-[var(--color-text-secondary)]">(değiştir)</span>
-    </button>
-  </div>
-
   <div class="relative">
     <span class="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--color-text-secondary)]">
       🔍
@@ -131,7 +97,7 @@
     <input
       type="text"
       bind:value={query}
-      placeholder={dynamicPlaceholder}
+      {placeholder}
       autofocus={autofocus}
       oninput={handleInput}
       onkeydown={handleKeydown}
@@ -155,16 +121,22 @@
 
   <!-- Suggestions Dropdown -->
   {#if showSuggestions && suggestions.length > 0}
-    <ul class="absolute z-50 w-full mt-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden">
+    <ul class="absolute z-50 w-full mt-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden max-h-80 overflow-y-auto">
       {#each suggestions as suggestion, i}
         <li>
           <button
             type="button"
             onclick={() => selectSuggestion(suggestion.word)}
-            class="w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-[var(--color-bg-secondary)] {i === selectedIndex ? 'bg-[var(--color-bg-secondary)]' : ''}"
+            class="w-full px-4 py-2 text-left flex items-center gap-2 hover:bg-[var(--color-bg-secondary)] {i === selectedIndex ? 'bg-[var(--color-bg-secondary)]' : ''}"
           >
+            <!-- Source indicator -->
+            {#if suggestion.source === 'english'}
+              <span class="text-xs px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 shrink-0">EN</span>
+            {:else}
+              <span class="text-xs px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 shrink-0">TR</span>
+            {/if}
             <span class="font-medium turkish-text">{suggestion.word}</span>
-            <span class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]">{suggestion.pos}</span>
+            <span class="text-xs px-1.5 py-0.5 rounded bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] shrink-0">{suggestion.pos}</span>
             <span class="text-sm text-[var(--color-text-secondary)] truncate flex-1">{suggestion.gloss}</span>
           </button>
         </li>
