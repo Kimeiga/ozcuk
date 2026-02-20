@@ -13,40 +13,32 @@
     }
   }
 
-  // Common verbs - conjugation examples
-  const commonVerbs = [
-    { word: 'gelmek', meaning: 'to come', note: 'Irregular' },
-    { word: 'gitmek', meaning: 'to go', note: 'Irregular' },
+  // Common Turkish words to explore (consolidated)
+  const commonTurkishWords = [
+    { word: 'gelmek', meaning: 'to come' },
+    { word: 'gitmek', meaning: 'to go' },
     { word: 'yapmak', meaning: 'to do/make' },
     { word: 'almak', meaning: 'to take/buy' },
     { word: 'vermek', meaning: 'to give' },
-    { word: 'görmek', meaning: 'to see' },
-    { word: 'bilmek', meaning: 'to know' },
-    { word: 'istemek', meaning: 'to want' },
-  ];
-
-  // Common nouns
-  const commonNouns = [
     { word: 'ev', meaning: 'house/home' },
     { word: 'su', meaning: 'water' },
     { word: 'kitap', meaning: 'book' },
-    { word: 'yol', meaning: 'road/way' },
-    { word: 'gün', meaning: 'day' },
-    { word: 'iş', meaning: 'work/job' },
-    { word: 'zaman', meaning: 'time' },
-    { word: 'insan', meaning: 'human/person' },
-  ];
-
-  // Adjectives & Adverbs
-  const descriptiveWords = [
     { word: 'güzel', meaning: 'beautiful' },
     { word: 'büyük', meaning: 'big/large' },
-    { word: 'küçük', meaning: 'small' },
-    { word: 'yeni', meaning: 'new' },
-    { word: 'eski', meaning: 'old' },
-    { word: 'çok', meaning: 'very/much' },
-    { word: 'hızlı', meaning: 'fast' },
-    { word: 'kolay', meaning: 'easy' },
+  ];
+
+  // English words for reverse lookup (English speakers learning Turkish)
+  const englishSearchExamples = [
+    { english: 'love', turkish: 'aşk, sevgi' },
+    { english: 'beautiful', turkish: 'güzel' },
+    { english: 'water', turkish: 'su' },
+    { english: 'food', turkish: 'yemek' },
+    { english: 'friend', turkish: 'arkadaş' },
+    { english: 'happy', turkish: 'mutlu' },
+    { english: 'work', turkish: 'iş, çalışmak' },
+    { english: 'time', turkish: 'zaman' },
+    { english: 'good', turkish: 'iyi' },
+    { english: 'book', turkish: 'kitap' },
   ];
 
   // Example sentences showing grammar
@@ -139,32 +131,11 @@
     </div>
   </section>
 
-  <!-- Common Verbs -->
+  <!-- Common Turkish Words -->
   <section class="mb-8">
-    <h2 class="text-lg font-semibold mb-4">🔄 Yaygın Fiiller</h2>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {#each commonVerbs as { word, meaning, note }}
-        <a
-          href="/{word}"
-          class="word-card hover:border-[var(--color-primary)] transition-colors"
-        >
-          <div class="flex items-center gap-2">
-            <span class="font-semibold turkish-text">{word}</span>
-            {#if note}
-              <span class="text-xs px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400">{note}</span>
-            {/if}
-          </div>
-          <div class="text-sm text-[var(--color-text-secondary)]">{meaning}</div>
-        </a>
-      {/each}
-    </div>
-  </section>
-
-  <!-- Common Nouns -->
-  <section class="mb-8">
-    <h2 class="text-lg font-semibold mb-4">📦 Yaygın İsimler</h2>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {#each commonNouns as { word, meaning }}
+    <h2 class="text-lg font-semibold mb-4">🇹🇷 Türkçe Kelimeler</h2>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {#each commonTurkishWords as { word, meaning }}
         <a
           href="/{word}"
           class="word-card hover:border-[var(--color-primary)] transition-colors"
@@ -176,17 +147,17 @@
     </div>
   </section>
 
-  <!-- Adjectives & Adverbs -->
+  <!-- English Search Examples -->
   <section class="mb-10">
-    <h2 class="text-lg font-semibold mb-4">✨ Sıfatlar ve Zarflar</h2>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {#each descriptiveWords as { word, meaning }}
+    <h2 class="text-lg font-semibold mb-4">🇬🇧 Search in English</h2>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      {#each englishSearchExamples as { english, turkish }}
         <a
-          href="/{word}"
+          href="/{turkish.split(',')[0].trim()}"
           class="word-card hover:border-[var(--color-primary)] transition-colors"
         >
-          <div class="font-semibold turkish-text">{word}</div>
-          <div class="text-sm text-[var(--color-text-secondary)]">{meaning}</div>
+          <div class="font-semibold">{english}</div>
+          <div class="text-sm text-[var(--color-text-secondary)]">→ {turkish}</div>
         </a>
       {/each}
     </div>
