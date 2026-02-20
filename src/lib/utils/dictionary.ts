@@ -276,17 +276,32 @@ export async function searchEnglishToTurkish(query: string, limit: number = 20):
   const reverseIdx = await loadReverseIndex();
 
   // Find matching English words from the reverse index
-  const matchingTurkish: Set<string> = new Set();
+  // Priority 1: Exact match
+  // Priority 2: Query is a prefix of the English word (e.g., "love" matches "lovely")
+  // Priority 3: English word starts with query
+  const exactMatches: Set<string> = new Set();
+  const prefixMatches: Set<string> = new Set();
 
   for (const [englishWord, turkishWords] of reverseIdx.entries()) {
-    if (englishWord.includes(normalizedQuery) || normalizedQuery.includes(englishWord)) {
+    // Exact match - highest priority
+    if (englishWord === normalizedQuery) {
       for (const tw of turkishWords) {
-        matchingTurkish.add(tw);
-        if (matchingTurkish.size >= limit * 2) break;
+        exactMatches.add(tw);
       }
     }
-    if (matchingTurkish.size >= limit * 2) break;
+    // Query starts with English word (e.g., query "water" matches index "water")
+    // Or English word starts with query (e.g., query "wat" matches "water")
+    else if (englishWord.startsWith(normalizedQuery) || normalizedQuery.startsWith(englishWord)) {
+      for (const tw of turkishWords) {
+        prefixMatches.add(tw);
+        if (prefixMatches.size >= limit * 3) break;
+      }
+    }
+    if (exactMatches.size + prefixMatches.size >= limit * 3) break;
   }
+
+  // Combine: exact matches first, then prefix matches
+  const matchingTurkish = new Set([...exactMatches, ...prefixMatches]);
 
   // Fetch the Turkish words
   const results: ProcessedWord[] = [];
@@ -299,15 +314,19 @@ export async function searchEnglishToTurkish(query: string, limit: number = 20):
 
     for (const word of wordResults) {
       if (word) {
-        // Verify the word actually contains the query in a gloss
+        // The reverse index already establishes the relationship
+        // If the definition contains the query, prioritize it at the front
+        // Otherwise, still include it but at the end (reverse index is authoritative)
         if (matchesDefinition(word, normalizedQuery)) {
-          results.push(word);
-          if (results.length >= limit) break;
+          results.unshift(word); // Add to front
+        } else {
+          results.push(word); // Add to back
         }
+        if (results.length >= limit) break;
       }
     }
   }
 
-  return results;
+  return results.slice(0, limit);
 }
 

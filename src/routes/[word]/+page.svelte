@@ -60,7 +60,44 @@
     <SearchBar bind:query={searchQuery} onSearch={handleSearch} autofocus={false} />
   </section>
 
-  {#if data.notFound}
+  {#if data.isEnglishSearch && data.englishResults.length > 0}
+    <!-- English Search Results -->
+    <div class="py-6">
+      <div class="flex items-center gap-3 mb-6">
+        <span class="text-3xl">🇬🇧</span>
+        <div>
+          <h1 class="text-2xl font-bold">"{data.query}" in Turkish</h1>
+          <p class="text-[var(--color-text-secondary)]">
+            Found {data.englishResults.length} Turkish word{data.englishResults.length > 1 ? 's' : ''} matching this English term
+          </p>
+        </div>
+      </div>
+
+      <div class="grid gap-4">
+        {#each data.englishResults as word}
+          <a
+            href="/{word.word}"
+            class="word-card hover:border-[var(--color-primary)] transition-colors block"
+          >
+            <div class="flex items-start gap-3">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xl font-bold turkish-text">{word.word}</span>
+                  <span class="pos-badge pos-{word.pos === 'adjective' ? 'adj' : word.pos === 'adverb' ? 'adv' : word.pos}">
+                    {word.pos}
+                  </span>
+                </div>
+                <div class="text-[var(--color-text-secondary)]">
+                  {word.senses[0]?.glosses[0] || ''}
+                </div>
+              </div>
+              <span class="text-[var(--color-text-secondary)]">→</span>
+            </div>
+          </a>
+        {/each}
+      </div>
+    </div>
+  {:else if data.notFound}
     <!-- Not Found -->
     <div class="text-center py-12">
       <div class="text-6xl mb-4">🔍</div>
@@ -68,14 +105,14 @@
       <p class="text-[var(--color-text-secondary)]">
         Bu kelime sözlüğümüzde mevcut değil. Başka bir kelime aramayı deneyin.
       </p>
-      
+
       {#if data.deinflectionResults.length > 0}
         <div class="mt-6">
           <p class="text-sm text-[var(--color-text-secondary)] mb-2">Olası kök formlar:</p>
           <div class="flex flex-wrap justify-center gap-2">
             {#each data.deinflectionResults as result}
-              <a 
-                href="/{result.dictionaryForm}" 
+              <a
+                href="/{result.dictionaryForm}"
                 class="px-3 py-1 bg-[var(--color-bg-secondary)] rounded-full text-sm hover:bg-[var(--color-primary)] hover:text-white transition-colors"
               >
                 {result.dictionaryForm}

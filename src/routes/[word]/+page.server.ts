@@ -1,5 +1,5 @@
 import type { PageServerLoad } from './$types';
-import { findWord } from '$lib/utils/dictionary';
+import { findWord, searchEnglishToTurkish, type ProcessedWord } from '$lib/utils/dictionary';
 import { deinflect } from '$lib/utils/deinflect';
 import { fetchTdkDefinition, type TdkEntry } from '$lib/utils/tdk';
 
@@ -27,6 +27,16 @@ export const load: PageServerLoad = async ({ params }) => {
     }
   }
 
+  // If still not found, try English reverse lookup
+  let englishResults: ProcessedWord[] = [];
+  let isEnglishSearch = false;
+  if (words.length === 0) {
+    englishResults = await searchEnglishToTurkish(query, 10);
+    if (englishResults.length > 0) {
+      isEnglishSearch = true;
+    }
+  }
+
   // Fetch TDK definition (native Turkish definitions)
   let tdkEntry: TdkEntry | null = null;
   if (words.length > 0) {
@@ -40,8 +50,10 @@ export const load: PageServerLoad = async ({ params }) => {
     query,
     words,
     deinflectionResults,
-    notFound: words.length === 0,
-    tdkEntry
+    notFound: words.length === 0 && englishResults.length === 0,
+    tdkEntry,
+    englishResults,
+    isEnglishSearch
   };
 };
 
